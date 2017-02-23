@@ -54,6 +54,7 @@ The list of integrations that are available in this gem includes:
   * Shoryuken<sup>[[link](#shoryuken)]</sup>
 * Other libraries
   * Rake<sup>[[link](#rake)]</sup>
+  * Logger<sup>[[link](#logger)]</sup>
 * Plain Ruby scripts<sup>[[link](#plain-ruby-scripts)]</sup>
 
 [Paying Airbrake plans][pricing] support the ability to track deployments of
@@ -394,7 +395,7 @@ anything manually and it should just work out-of-box.
 ### Rake
 
 Airbrake offers Rake tasks integration, which is used by our Rails
-integration<sup>[[link](#rails)]</sup>.  To integrate Airbrake in any project,
+integration<sup>[[link](#rails)]</sup>. To integrate Airbrake in any project,
 just `require` the gem in your `Rakefile`, if it hasn't been required and
 [configure][config] the default notifier.
 
@@ -410,6 +411,35 @@ end
 task :foo do
   1/0
 end
+```
+
+### Logger
+
+If you want to convert your log messages to Airbrake errors, you can use our
+integration with Ruby's `Logger` class from stdlib. All you need to do is to
+make sure that the integration is required (if the Airbrake is loaded after
+`Logger`, then it is already integrated):
+
+```ruby
+require 'airbrake/logger/logger_ext'
+```
+
+To start using the integration create a new Logger and assign an Airbrake
+notifier to it:
+
+```ruby
+logger = Logger.new(STDOUT)
+
+# New method.
+# We assign the default notifier here.
+logger.airbrake = Airbrake[:default]
+```
+
+Then, simply use the logger as you normally do. Messages will be both logged
+and sent to Airbrake.
+
+```ruby
+logger.fatal('oops')
 ```
 
 ### Plain Ruby scripts

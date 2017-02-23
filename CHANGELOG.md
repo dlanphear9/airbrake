@@ -5,6 +5,8 @@ Airbrake Changelog
 
 * **IMPORTANT:** added Shoryuken integration
   ([#669](https://github.com/airbrake/airbrake/pull/669))
+* **IMPORTANT:** added Logger integration
+  ([#674](https://github.com/airbrake/airbrake/pull/674))
 
 ### [v5.7.1][v5.7.1] (February 10, 2017)
 
