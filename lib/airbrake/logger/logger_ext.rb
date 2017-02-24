@@ -12,30 +12,47 @@
 #   # Just use the logger like you normally do.
 #   logger.fatal('oops')
 class Logger
-  # Store the orginal method to use it later.
+  # Store the orginal methods to use them later.
   alias add_without_airbrake add
+  alias initialize_without_airbrake initialize
+
+  ##
+  # @see https://goo.gl/MvlYq3 Logger#initialize
+  def initialize(*args)
+    @airbrake = Airbrake[:default]
+    @airbrake_severity_level = WARN
+    initialize_without_airbrake(*args)
+  end
 
   ##
   # @return [Airbrake::Notifier] notifier to be used to send notices
   attr_accessor :airbrake
 
   ##
-  # @see Logger#add
+  # @example
+  #   logger.airbrake_severity_level = Logger::FATAL
+  # @return [Integer] the level that c
+  attr_accessor :airbrake_severity_level
+
+  ##
+  # @see https://goo.gl/8zPyoM Logger#add
   def add(severity, message = nil, progname = nil)
-    notify_airbrake(message || progname, severity) if airbrake
+    if severity >= airbrake_severity_level && airbrake
+      notify_airbrake(severity, message || progname)
+    end
     add_without_airbrake(severity, message, progname)
   end
 
   private
 
-  def notify_airbrake(message, severity)
-    notice = Airbrake.build_notice(message || progname)
+  def notify_airbrake(severity, message)
+    notice = Airbrake.build_notice(message)
 
     # Get rid of unwanted internal Logger frames.
     # Example: /ruby-2.4.0/lib/ruby/2.4.0/logger.rb
     notice[:errors].first[:backtrace].shift
 
-    notice[:context][:component] = 'logger'
+    notice[:context][:component] = 'log'
     notice[:context][:severity] = airbrake_severity(severity)
 
     Airbrake.notify(notice)

@@ -12,6 +12,8 @@ RSpec.describe Logger do
     Airbrake::Notifier.new(project_id: project_id, project_key: project_key)
   end
 
+  let(:logger) { Logger.new('/dev/null') }
+
   def wait_for_a_request_with_body(body)
     wait_for(a_request(:post, endpoint).with(body: body)).to have_been_made.once
   end
@@ -21,12 +23,16 @@ RSpec.describe Logger do
   end
 
   describe "#airbrake" do
-    it "installs Airbrake notifier" do
-      l = Logger.new('/dev/null')
-      expect(l.airbrake).to be_nil
+    it "has the default notifier installed by default" do
+      expect(logger.airbrake).to be_an(Airbrake::Notifier)
+    end
 
-      l.airbrake = airbrake
-      expect(l.airbrake).to be_an(Airbrake::Notifier)
+    it "installs Airbrake notifier" do
+      notifier_id = airbrake.object_id
+      expect(logger.airbrake.object_id).not_to eq(notifier_id)
+
+      logger.airbrake = airbrake
+      expect(logger.airbrake.object_id).to eq(notifier_id)
     end
   end
 
@@ -38,7 +44,7 @@ RSpec.describe Logger do
       logger.airbrake = airbrake
     end
 
-    it "both logs and notifies with the correct severity" do
+    it "both logs and notifies" do
       msg = 'bingo'
       logger.fatal(msg)
 
@@ -53,7 +59,7 @@ RSpec.describe Logger do
 
     it "sets the correct component" do
       logger.fatal('bingo')
-      wait_for_a_request_with_body(/"component":"logger"/)
+      wait_for_a_request_with_body(/"component":"log"/)
     end
 
     it "strips out internal logger frames" do
@@ -66,16 +72,40 @@ RSpec.describe Logger do
     end
   end
 
+  describe "#airbrake_severity_level" do
+    context "when not set" do
+      it "defaults to Logger::WARN" do
+        expect(logger.airbrake_severity_level).to eq(Logger::WARN)
+      end
+    end
+
+    context "when set" do
+      before do
+        logger.airbrake_severity_level = Logger::FATAL
+      end
+
+      it "does not notify below the specified level" do
+        logger.error('bingo')
+        wait_for(a_request(:post, endpoint)).not_to have_been_made
+      end
+
+      it "notifies in the current or above level" do
+        logger.fatal('bingo')
+        wait_for(a_request(:post, endpoint)).to have_been_made
+      end
+    end
+  end
+
   context "when Airbrake is not installed" do
     it "only logs, never notifies" do
       out = StringIO.new
       l = Logger.new(out)
       msg = 'bango'
 
-      l.debug(msg)
+      l.fatal(msg)
 
       wait_for(a_request(:post, endpoint)).not_to have_been_made
-      expect(out.string).to match('DEBUG -- : bango')
+      expect(out.string).to match('FATAL -- : bango')
     end
   end
 end
