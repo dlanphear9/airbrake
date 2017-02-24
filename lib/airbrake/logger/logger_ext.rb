@@ -48,9 +48,12 @@ class Logger
   def notify_airbrake(severity, message)
     notice = Airbrake.build_notice(message)
 
-    # Get rid of unwanted internal Logger frames.
-    # Example: /ruby-2.4.0/lib/ruby/2.4.0/logger.rb
-    notice[:errors].first[:backtrace].shift
+    # Get rid of unwanted internal Logger frames. Examples:
+    # * /ruby-2.4.0/lib/ruby/2.4.0/logger.rb
+    # * /gems/activesupport-4.2.7.1/lib/active_support/logger.rb
+    backtrace = notice[:errors].first[:backtrace]
+    notice[:errors].first[:backtrace] =
+      backtrace.drop_while { |frame| frame[:file] =~ %r{/logger.rb\z} }
 
     notice[:context][:component] = 'log'
     notice[:context][:severity] = airbrake_severity(severity)
